@@ -21,7 +21,7 @@ const About: React.FC = () => {
       <div className="container">
         <div className="about-grid">
           <div className="about-img" data-reveal>
-            <img src="/img/about.png" alt="Community Work" loading="lazy" />
+            <img src={`${import.meta.env.BASE_URL}img/about.png`} alt="Community Work" loading="lazy" />
           </div>
           <div className="about-text" data-reveal>
             <div className="section-title" style={{ textAlign: 'left', marginBottom: '2rem' }}>

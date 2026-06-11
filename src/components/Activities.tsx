@@ -14,7 +14,7 @@ const Activities: React.FC = () => {
 
   const activitiesData: Activity[] = [
     {
-      imageSrc: '/img/yoga-workshop.png',
+      imageSrc: `${import.meta.env.BASE_URL}img/yoga-workshop.png`,
       tag: t('activities.tagHealth'),
       title: t('activities.yogaTitle'),
       description: t('activities.yogaDesc'),

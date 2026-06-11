@@ -16,7 +16,7 @@ const Legacy: React.FC = () => {
         <div className="legacy-item legacy-grid">
           <div className="legacy-image-gallery" data-reveal>
             <div className="legacy-image-container">
-              <img src="/img/vishnu_gole.png" alt="Late Shri Vyankatesh Vishnu Gole" loading="lazy" />
+              <img src={`${import.meta.env.BASE_URL}img/vishnu_gole.png`} alt="Late Shri Vyankatesh Vishnu Gole" loading="lazy" />
             </div>
           </div>
           <div className="legacy-content" data-reveal>
@@ -32,10 +32,10 @@ const Legacy: React.FC = () => {
         <div className="legacy-item legacy-grid">
           <div className="legacy-image-gallery" data-reveal style={{ direction: 'ltr' }}>
             <div className="legacy-image-container">
-              <img src="/img/lata-wadavalkar.png" alt="Late Smt. Lata Ambadas Wadwalkar" loading="lazy" />
+              <img src={`${import.meta.env.BASE_URL}img/lata-wadavalkar.png`} alt="Late Smt. Lata Ambadas Wadwalkar" loading="lazy" />
             </div>
             <div className="legacy-image-container">
-              <img src="/img/lata.png" alt="Lataji - community work" loading="lazy" />
+              <img src={`${import.meta.env.BASE_URL}img/lata.png`} alt="Lataji - community work" loading="lazy" />
             </div>
           </div>
           <div className="legacy-content" data-reveal style={{ direction: 'ltr' }}>
