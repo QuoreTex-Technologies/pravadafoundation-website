@@ -70,7 +70,7 @@ const Footer: React.FC<FooterProps> = ({ onOpenPrivacy }) => {
         }}>
           <p>
             <strong>Pravada Foundation</strong> | 
-            Address: PRAVADA FOUNDATION HANUMAN MANDIR NEAR SHANKAR NAGAR AMRAVATI TALUKA DISTRICT AMRAVATI <br></br>
+            Address: PRAVADA FOUNDATION HANUMAN MANDIR NEAR SHANKAR NAGAR, AMRAVATI TALUKA , DISTRICT AMRAVATI <br></br>
             Email: <a href="mailto:info@pravadafoundation.in" style={{ color: '#aaa' }}>info@pravadafoundation.in</a> | 
             Phone: +91-8956387346
           </p>
