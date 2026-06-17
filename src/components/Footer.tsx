@@ -60,6 +60,22 @@ const Footer: React.FC<FooterProps> = ({ onOpenPrivacy }) => {
             </ul>
           </div>
         </div>
+        <div className="footer-legal-info" style={{ 
+            marginTop: '30px', 
+            paddingTop: '20px', 
+            borderTop: '1px solid #333', 
+            textAlign: 'center', 
+            fontSize: '0.85rem', 
+            color: '#eeeaea' 
+        }}>
+          <p>
+            <strong>Pravada Foundation</strong> | 
+            Address: PRAVADA FOUNDATION HANUMAN MANDIR NEAR SHANKAR NAGAR AMRAVATI TALUKA DISTRICT AMRAVATI <br></br>| 
+            Email: <a href="mailto:info@pravadafoundation.in" style={{ color: '#aaa' }}>info@pravadafoundation.in</a> | 
+            Phone: +91-8956387346
+          </p>
+        </div>
+
         <div className="footer-bottom">
           <p>&copy; {new Date().getFullYear()} Pravada Foundation. All rights reserved. Created with integrity.</p>
         </div>
