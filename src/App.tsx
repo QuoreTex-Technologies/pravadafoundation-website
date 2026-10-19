@@ -14,9 +14,29 @@ import Contact from './components/Contact';
 import Footer from './components/Footer';
 import CookieConsent from './components/CookieConsent';
 import PrivacyPolicyModal from './components/PrivacyPolicyModal';
+import SearchVoters from './components/SearchVoters';
 
 const App: React.FC = () => {
   const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
+  const [currentView, setCurrentView] = useState<'home' | 'search-voters'>(() => {
+    return window.location.hash === '#search-voters' || window.location.hash === '#check-booth'
+      ? 'search-voters'
+      : 'home';
+  });
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      if (window.location.hash === '#search-voters' || window.location.hash === '#check-booth') {
+        setCurrentView('search-voters');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else if (window.location.hash === '' || window.location.hash === '#home') {
+        setCurrentView('home');
+      }
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
 
   useEffect(() => {
     const revealElements = document.querySelectorAll('[data-reveal]');
@@ -40,23 +60,52 @@ const App: React.FC = () => {
     return () => {
       observer.disconnect();
     };
-  }, []);
+  }, [currentView]);
+
+  const openSearchVoters = () => {
+    setCurrentView('search-voters');
+    window.location.hash = 'search-voters';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const backToHome = () => {
+    setCurrentView('home');
+    window.location.hash = '';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const isSearchVotersView = currentView === 'search-voters';
 
   return (
     <>
-      <Navbar />
-      <Hero />
-      <About />
-      <Pillars />
-      <Impact />
-      <Quote />
-      <Legacy />
-      <Philosophy />
-      <Objectives />
-      <Team />
-      <Activities />
-      <Contact onOpenPrivacy={() => setIsPrivacyOpen(true)} />
-      <Footer onOpenPrivacy={() => setIsPrivacyOpen(true)} />
+      {!isSearchVotersView && <Navbar onOpenSearchVoters={openSearchVoters} />}
+
+      {isSearchVotersView ? (
+        <div className="voter-portal-page-wrap">
+          <SearchVoters onBackToHome={backToHome} />
+        </div>
+      ) : (
+        <>
+          <Hero />
+          <About />
+          <Pillars />
+          <Impact />
+          <Quote />
+          <Legacy />
+          <Philosophy />
+          <Objectives />
+          <Team />
+          <Activities />
+          <Contact onOpenPrivacy={() => setIsPrivacyOpen(true)} />
+        </>
+      )}
+
+      {!isSearchVotersView && (
+        <Footer
+          onOpenPrivacy={() => setIsPrivacyOpen(true)}
+          onOpenSearchVoters={openSearchVoters}
+        />
+      )}
       <CookieConsent onOpenPrivacy={() => setIsPrivacyOpen(true)} />
       <PrivacyPolicyModal isOpen={isPrivacyOpen} onClose={() => setIsPrivacyOpen(false)} />
     </>

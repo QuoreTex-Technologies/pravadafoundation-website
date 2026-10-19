@@ -1,14 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../context/LanguageContext';
 
-const Navbar: React.FC = () => {
+interface NavbarProps {
+  onOpenSearchVoters?: () => void;
+  isSolid?: boolean;
+  onNavigateHome?: (targetId: string) => void;
+}
+
+const Navbar: React.FC<NavbarProps> = ({ onOpenSearchVoters, isSolid = false, onNavigateHome }) => {
   const { language, setLanguage, t } = useTranslation();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
-      if (window.scrollY > 50) {
+      if (window.scrollY > 30) {
         setIsScrolled(true);
       } else {
         setIsScrolled(false);
@@ -26,6 +32,12 @@ const Navbar: React.FC = () => {
   const handleLinkClick = (e: React.MouseEvent<HTMLAnchorElement>, targetId: string) => {
     e.preventDefault();
     setIsOpen(false);
+
+    if (onNavigateHome) {
+      onNavigateHome(targetId);
+      return;
+    }
+
     const targetElement = document.querySelector(targetId);
     if (targetElement) {
       const offsetTop = (targetElement as HTMLElement).offsetTop - 70;
@@ -36,15 +48,17 @@ const Navbar: React.FC = () => {
     }
   };
 
+  const hasDarkBg = isScrolled || isSolid;
+
   const LangSwitcher = () => (
     <div 
       className="lang-switcher-pill" 
       style={{
         display: 'flex',
         position: 'relative',
-        background: isScrolled ? 'rgba(15, 61, 47, 0.25)' : 'rgba(255, 255, 255, 0.12)',
+        background: 'rgba(255, 255, 255, 0.15)',
         backdropFilter: 'blur(8px)',
-        border: isScrolled ? '1px solid rgba(15, 61, 47, 0.15)' : '1px solid rgba(255, 255, 255, 0.2)',
+        border: '1px solid rgba(255, 255, 255, 0.25)',
         borderRadius: '2rem',
         padding: '3px',
         width: '110px',
@@ -65,7 +79,7 @@ const Navbar: React.FC = () => {
           background: 'var(--accent)',
           borderRadius: '2rem',
           transition: 'all 0.35s cubic-bezier(0.25, 1, 0.5, 1)',
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)'
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)'
         }} 
       />
       <div 
@@ -77,7 +91,7 @@ const Navbar: React.FC = () => {
           justifyContent: 'center',
           fontSize: '0.8rem',
           fontWeight: '700',
-          color: language === 'en' ? 'var(--primary)' : (isScrolled ? 'var(--primary)' : 'var(--white)'),
+          color: language === 'en' ? '#0f3d2f' : '#ffffff',
           zIndex: 1,
           transition: 'color 0.3s'
         }}
@@ -93,7 +107,7 @@ const Navbar: React.FC = () => {
           justifyContent: 'center',
           fontSize: '0.8rem',
           fontWeight: '700',
-          color: language === 'mr' ? 'var(--primary)' : (isScrolled ? 'var(--primary)' : 'var(--white)'),
+          color: language === 'mr' ? '#0f3d2f' : '#ffffff',
           zIndex: 1,
           transition: 'color 0.3s'
         }}
@@ -104,7 +118,7 @@ const Navbar: React.FC = () => {
   );
 
   return (
-    <nav id="navbar" className={isScrolled ? 'scrolled' : ''}>
+    <nav id="navbar" className={hasDarkBg ? 'scrolled nav-solid' : ''}>
       <div className="container nav-content">
         <div className="logo-section">
           <a href="#" className="brand-link" aria-label="Pravada Foundation home" onClick={(e) => handleLinkClick(e, '#')}>
@@ -134,6 +148,26 @@ const Navbar: React.FC = () => {
             <li><a href="#pillars" onClick={(e) => handleLinkClick(e, '#pillars')}>{t('nav.pillars')}</a></li>
             <li><a href="#impact" onClick={(e) => handleLinkClick(e, '#impact')}>{t('nav.impact')}</a></li>
             <li><a href="#contact" onClick={(e) => handleLinkClick(e, '#contact')}>{t('nav.contact')}</a></li>
+            <li>
+              <a 
+                href="#check-booth" 
+                onClick={(e) => { 
+                  e.preventDefault(); 
+                  setIsOpen(false); 
+                  onOpenSearchVoters?.(); 
+                }}
+                style={{ 
+                  color: '#d4af37', 
+                  fontWeight: '700',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <i className="fa fa-vote-yea"></i>
+                {language === 'mr' ? 'मतदार / केंद्र शोधा' : 'Check Booth'}
+              </a>
+            </li>
           </ul>
           
           {/* Language Switcher and CTA in Mobile Dropdown */}

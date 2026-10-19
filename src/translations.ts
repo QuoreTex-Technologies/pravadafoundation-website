@@ -7,6 +7,7 @@ export const translations = {
       contact: 'Contact',
       joinUs: 'Join Us',
       privacyPolicy: 'Privacy Policy',
+      checkBooth: 'Check Your Booth',
     },
     hero: {
       title: 'Pravada Foundation',
@@ -136,6 +137,7 @@ export const translations = {
       contact: 'संपर्क',
       joinUs: 'सहभागी व्हा',
       privacyPolicy: 'गोपनीयता धोरण',
+      checkBooth: 'मतदान केंद्र शोधा',
     },
     hero: {
       title: 'प्रवादा फाउंडेशन',
