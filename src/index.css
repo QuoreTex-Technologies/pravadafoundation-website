@@ -1614,6 +1614,9 @@ nav.scrolled .nav-links a:hover {
     padding: 1.5rem 1.35rem;
     box-shadow: var(--shadow);
     border: 1px solid rgba(15, 61, 47, 0.08);
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
 }
 
 .voter-portal__search-heading {
@@ -1636,6 +1639,8 @@ nav.scrolled .nav-links a:hover {
     display: flex;
     gap: 0.65rem;
     flex-wrap: wrap;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .voter-portal__search-input-wrap {
@@ -1674,17 +1679,22 @@ nav.scrolled .nav-links a:hover {
 
 .voter-portal__filter-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: 1fr;
     gap: 1rem;
     margin-top: 1.35rem;
     padding-top: 1.25rem;
     border-top: 1px solid rgba(15, 61, 47, 0.08);
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .voter-portal__field {
     display: flex;
     flex-direction: column;
     gap: 0.35rem;
+    min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .voter-portal__field span {
@@ -1693,10 +1703,16 @@ nav.scrolled .nav-links a:hover {
     color: var(--text-light);
     text-transform: uppercase;
     letter-spacing: 0.04em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .voter-portal__field select {
-    height: 2.5rem;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    height: 2.65rem;
     border-radius: 0.5rem;
     border: 1.5px solid rgba(15, 61, 47, 0.12);
     padding: 0 0.75rem;
@@ -1704,18 +1720,37 @@ nav.scrolled .nav-links a:hover {
     background: var(--bg-main);
     color: var(--text-main);
     font-family: inherit;
+    box-sizing: border-box;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.voter-portal__field select:focus {
+    border-color: var(--primary-light);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(26, 87, 67, 0.12);
 }
 
 .voter-portal__field--wide {
     grid-column: 1 / -1;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 640px) {
+    .voter-portal__filter-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .voter-portal__field--wide {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (min-width: 900px) {
+    .voter-portal__filter-grid {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.35fr);
+    }
     .voter-portal__field--wide {
         grid-column: span 1;
-    }
-    .voter-portal__filter-grid {
-        grid-template-columns: 1fr 1fr 1.4fr;
     }
 }
 
@@ -2071,9 +2106,6 @@ nav.scrolled .nav-links a:hover {
 }
 
 @media (max-width: 600px) {
-    .voter-portal__filter-grid {
-        grid-template-columns: 1fr;
-    }
     .voter-portal__hero-inner {
         flex-direction: column;
     }

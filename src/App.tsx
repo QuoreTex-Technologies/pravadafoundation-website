@@ -15,6 +15,7 @@ import Footer from './components/Footer';
 import CookieConsent from './components/CookieConsent';
 import PrivacyPolicyModal from './components/PrivacyPolicyModal';
 import SearchVoters from './components/SearchVoters';
+import './App.css';
 
 const App: React.FC = () => {
   const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);

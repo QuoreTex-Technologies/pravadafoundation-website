@@ -16,8 +16,13 @@ export interface VoterSearchParams {
   taluka?: string;
   schoolId?: number | string;
   institute?: string;
+  instituteName?: string;
   search?: string;
   name?: string;
+  electorName?: string;
+  booth?: string;
+  boothNo?: string;
+  partNo?: number | string;
   page?: number;
   size?: number;
 }
@@ -49,72 +54,28 @@ export interface ApiVoterRecord {
   BoothName?: string;
 }
 
-// Fallback initial options if API is unreachable
 export const FALLBACK_OPTIONS: VoterOptionsData = {
-  districts: [
-    { id: '32', name: 'Amravati' },
-    { id: '33', name: 'Akola' },
-    { id: '34', name: 'Buldhana' },
-    { id: '35', name: 'Yavatmal' },
-    { id: '36', name: 'Washim' },
-  ],
-  talukas: [
-    { id: '101', name: 'Amravati', districtId: '32' },
-    { id: '102', name: 'Achalpur', districtId: '32' },
-    { id: '103', name: 'Chandurbazar', districtId: '32' },
-    { id: '104', name: 'Morshi', districtId: '32' },
-    { id: '105', name: 'Warud', districtId: '32' },
-    { id: '106', name: 'Daryapur', districtId: '32' },
-    { id: '107', name: 'Anjangaon Surji', districtId: '32' },
-    { id: '108', name: 'Bhatkuli', districtId: '32' },
-    { id: '109', name: 'Tiwsa', districtId: '32' },
-    { id: '110', name: 'Nandgaon Khandeshwar', districtId: '32' },
-    { id: '111', name: 'Dharni', districtId: '32' },
-    { id: '112', name: 'Chikhaldara', districtId: '32' },
-    { id: '113', name: 'Dhamangaon Rly', districtId: '32' },
-
-    { id: '201', name: 'Akola', districtId: '33' },
-    { id: '202', name: 'Murtizapur', districtId: '33' },
-    { id: '203', name: 'Akot', districtId: '33' },
-    { id: '204', name: 'Balapur', districtId: '33' },
-    { id: '205', name: 'Telhara', districtId: '33' },
-    { id: '206', name: 'Patur', districtId: '33' },
-    { id: '207', name: 'Barshitakli', districtId: '33' },
-
-    { id: '301', name: 'Buldhana', districtId: '34' },
-    { id: '302', name: 'Chikhli', districtId: '34' },
-    { id: '303', name: 'Khamgaon', districtId: '34' },
-    { id: '304', name: 'Malkapur', districtId: '34' },
-    { id: '305', name: 'Shegaon', districtId: '34' },
-    { id: '306', name: 'Mehkar', districtId: '34' },
-    { id: '307', name: 'Nandura', districtId: '34' },
-
-    { id: '401', name: 'Yavatmal', districtId: '35' },
-    { id: '402', name: 'Pusad', districtId: '35' },
-    { id: '403', name: 'Digras', districtId: '35' },
-    { id: '404', name: 'Umarkhed', districtId: '35' },
-    { id: '405', name: 'Darwha', districtId: '35' },
-    { id: '406', name: 'Wani', districtId: '35' },
-
-    { id: '501', name: 'Washim', districtId: '36' },
-    { id: '502', name: 'Karanja', districtId: '36' },
-    { id: '503', name: 'Risod', districtId: '36' },
-    { id: '504', name: 'Malegaon', districtId: '36' },
-    { id: '505', name: 'Mangrulpir', districtId: '36' },
-    { id: '506', name: 'Manora', districtId: '36' },
-  ],
+  districts: [],
+  talukas: [],
   institutes: [],
 };
 
+const envApiUrl = (import.meta as any).env?.VITE_API_BASE_URL
+  ? `${String((import.meta as any).env.VITE_API_BASE_URL).replace(/\/$/, '')}/api`
+  : null;
+
 const BASE_URL_CANDIDATES = [
-  '/api', // Vite proxy routes to http://localhost:3001
+  '/api', // Vite proxy routes to VITE_API_BASE_URL
+  ...(envApiUrl ? [envApiUrl] : []),
+  'http://localhost:9056/api',
+  'https://api.mishikshak.quore-tex.com/api',
   'http://localhost:3001/api',
 ];
 
 /** Helper to fetch with timeout and fallback candidates */
 async function apiFetch(endpoint: string, options: RequestInit = {}): Promise<Response> {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 6000);
+  const timeoutId = setTimeout(() => controller.abort(), 8000);
 
   let lastError: any = null;
 
@@ -159,7 +120,7 @@ export function mapApiVoterToRecord(item: any, fallbackIndex: number): ApiVoterR
     item.electorName ||
     item.name ||
     [item.firstName, item.middleName, item.lastName].filter(Boolean).join(' ') ||
-    'अज्ञात';
+    'Unknown';
 
   const districtName =
     (typeof item.district === 'object' ? item.district?.name : item.district) ||
@@ -219,7 +180,7 @@ export function mapApiVoterToRecord(item: any, fallbackIndex: number): ApiVoterR
     '';
 
   return {
-    TeacherId: String(item.teacherId || item.id || item.voterId || `voter-${fallbackIndex}`),
+    TeacherId: String(item.teacherId || item.id || item.voterId || item.serialNumber || `voter-${fallbackIndex}`),
     TeacherName: teacherName,
     RelativeName: item.relativeName || item.RelativeName || '',
     Gender: gender,
@@ -238,11 +199,25 @@ export function mapApiVoterToRecord(item: any, fallbackIndex: number): ApiVoterR
 
 /**
  * 1. GET /api/public/ec-voters/options
- * Returns available districts, talukas, and schools/institutes for filtration
+ * When districtId / talukaId is passed: GET /api/public/ec-voters/options?districtId={districtId}&talukaId={talukaId}
+ * Returns available districts, talukas, and institutes for filtration
  */
-export async function getVoterOptions(): Promise<{ options: VoterOptionsData; isLive: boolean }> {
+export async function getVoterOptions(
+  districtId?: number | string,
+  talukaId?: number | string
+): Promise<{ options: VoterOptionsData; isLive: boolean }> {
   try {
-    const res = await apiFetch('/public/ec-voters/options');
+    const query = new URLSearchParams();
+    if (districtId !== undefined && districtId !== null && districtId !== '') {
+      query.append('districtId', String(districtId));
+    }
+    if (talukaId !== undefined && talukaId !== null && talukaId !== '') {
+      query.append('talukaId', String(talukaId));
+    }
+    const queryString = query.toString();
+    const endpoint = `/public/ec-voters/options${queryString ? `?${queryString}` : ''}`;
+    const res = await apiFetch(endpoint);
+
     if (!res.ok) {
       console.warn(`[voterApi] /public/ec-voters/options returned status ${res.status}`);
       return { options: FALLBACK_OPTIONS, isLive: false };
@@ -253,16 +228,28 @@ export async function getVoterOptions(): Promise<{ options: VoterOptionsData; is
 
     const parseList = (list: any): OptionItem[] => {
       if (!Array.isArray(list)) return [];
-      return list.map((item: any, i: number) => {
-        if (typeof item === 'string') {
-          return { id: item, name: item };
-        }
-        return {
-          id: item.id ?? item.value ?? item.code ?? i,
-          name: item.name ?? item.title ?? item.label ?? String(item),
-          districtId: item.districtId ?? item.district_id,
-        };
-      });
+      const seen = new Set<string>();
+      return list
+        .map((item: any, i: number) => {
+          if (typeof item === 'string') {
+            const trimmed = item.trim();
+            // Filter out empty or heavily corrupted strings
+            if (!trimmed || /^[\s?._\-0-9\u0080-\uFFFF]{1,4}$/.test(trimmed)) {
+              return null;
+            }
+            if (seen.has(trimmed.toLowerCase())) return null;
+            seen.add(trimmed.toLowerCase());
+            return { id: trimmed, name: trimmed };
+          }
+          const id = item.id ?? item.value ?? item.code ?? i;
+          const name = item.name ?? item.title ?? item.label ?? String(item);
+          return {
+            id,
+            name,
+            districtId: item.districtId ?? item.district_id,
+          };
+        })
+        .filter(Boolean) as OptionItem[];
     };
 
     const rawDistricts = data.districts || data.districtList || (Array.isArray(data) ? data : []);
@@ -273,27 +260,23 @@ export async function getVoterOptions(): Promise<{ options: VoterOptionsData; is
     const talukas = parseList(rawTalukas);
     const institutes = parseList(rawInstitutes);
 
-    if (districts.length === 0) {
-      return { options: FALLBACK_OPTIONS, isLive: true };
-    }
-
     return {
       options: {
         districts,
-        talukas: talukas.length > 0 ? talukas : FALLBACK_OPTIONS.talukas,
+        talukas,
         institutes,
       },
       isLive: true,
     };
   } catch (error) {
-    console.warn('[voterApi] Failed to fetch options from live API, using fallback:', error);
+    console.warn('[voterApi] Failed to fetch options from live API:', error);
     return { options: FALLBACK_OPTIONS, isLive: false };
   }
 }
 
 /**
- * 2. GET /api/public/ec-voters/search?districtId=32
- * Used for filtration and searching data
+ * 2. GET /api/public/ec-voters/search
+ * Supports electorName, partNo, districtId, talukaId, instituteName, page, size
  */
 export async function searchEcVoters(
   params: VoterSearchParams
@@ -306,20 +289,20 @@ export async function searchEcVoters(
   if (params.talukaId !== undefined && params.talukaId !== null && params.talukaId !== '') {
     query.append('talukaId', String(params.talukaId));
   }
-  if (params.taluka) {
-    query.append('taluka', params.taluka);
+  const instName = params.instituteName || params.institute;
+  if (instName && instName.trim()) {
+    query.append('instituteName', instName.trim());
   }
-  if (params.schoolId !== undefined && params.schoolId !== null && params.schoolId !== '') {
-    query.append('schoolId', String(params.schoolId));
+  const elector = params.electorName || params.name;
+  if (elector && elector.trim()) {
+    query.append('electorName', elector.trim());
   }
-  if (params.institute) {
-    query.append('institute', params.institute);
-  }
-  if (params.search) {
-    query.append('search', params.search);
-  }
-  if (params.name) {
-    query.append('name', params.name);
+  const part =
+    params.partNo !== undefined && params.partNo !== null && params.partNo !== ''
+      ? params.partNo
+      : params.boothNo || params.booth;
+  if (part !== undefined && part !== null && String(part).trim() !== '') {
+    query.append('partNo', String(part).trim());
   }
   if (params.page !== undefined) {
     query.append('page', String(params.page));
@@ -327,26 +310,36 @@ export async function searchEcVoters(
   if (params.size !== undefined) {
     query.append('size', String(params.size));
   } else {
-    query.append('size', '50');
+    query.append('size', '25');
   }
 
   const endpoint = `/public/ec-voters/search?${query.toString()}`;
 
   try {
     const res = await apiFetch(endpoint);
-    if (!res.ok) {
-      throw new Error(`API returned HTTP ${res.status}`);
+    let json: any = null;
+    try {
+      json = await res.json();
+    } catch {
+      json = null;
     }
 
-    const json = await res.json();
-    const data = json.data || json;
+    if (!res.ok) {
+      const serverMessage = json?.message || `API returned HTTP ${res.status}`;
+      throw new Error(serverMessage);
+    }
 
-    // Handle pagination structures (Spring Page or standard array)
+    if (json && json.success === false) {
+      throw new Error(json.message || 'Search request was unsuccessful');
+    }
+
+    const data = json?.data || json;
+
     let content: any[] = [];
     let totalElements = 0;
     let totalPages = 1;
     let currentPage = params.page || 0;
-    let pageSize = params.size || 50;
+    let pageSize = params.size || 25;
 
     if (Array.isArray(data)) {
       content = data;
@@ -384,9 +377,63 @@ export async function searchEcVoters(
       totalElements: 0,
       totalPages: 0,
       currentPage: 0,
-      pageSize: params.size || 50,
+      pageSize: params.size || 25,
       isLiveApi: false,
       error: error.message || 'API connection failed',
+    };
+  }
+}
+
+/**
+ * Helper to search across all districts when no specific district filter is chosen
+ */
+export async function searchAllDistricts(
+  districtIds: (string | number)[],
+  page: number = 0,
+  pageSizePerDistrict: number = 10
+): Promise<SearchVotersApiResponse> {
+  if (!districtIds.length) {
+    return {
+      records: [],
+      totalElements: 0,
+      totalPages: 0,
+      currentPage: 0,
+      pageSize: 0,
+      isLiveApi: false,
+      error: 'No districts available to search',
+    };
+  }
+
+  try {
+    const promises = districtIds.map((id) =>
+      searchEcVoters({
+        districtId: id,
+        page,
+        size: pageSizePerDistrict,
+      })
+    );
+    const results = await Promise.all(promises);
+    const records = results.flatMap((r) => r.records);
+    const totalElements = results.reduce((sum, r) => sum + r.totalElements, 0);
+    const totalPages = Math.ceil(totalElements / (pageSizePerDistrict * districtIds.length)) || 1;
+
+    return {
+      records,
+      totalElements,
+      totalPages,
+      currentPage: page,
+      pageSize: pageSizePerDistrict * districtIds.length,
+      isLiveApi: true,
+    };
+  } catch (error: any) {
+    return {
+      records: [],
+      totalElements: 0,
+      totalPages: 0,
+      currentPage: 0,
+      pageSize: pageSizePerDistrict * districtIds.length,
+      isLiveApi: false,
+      error: error.message || 'Failed to search all districts',
     };
   }
 }
