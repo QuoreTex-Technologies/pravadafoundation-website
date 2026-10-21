@@ -4,9 +4,8 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  const apiTarget = new URL(
+  const apiTarget =
     env.VITE_API_BASE_URL || 'https://api.mishikshak.quore-tex.com'
-  )
 
   return {
     plugins: [react()],
@@ -14,9 +13,9 @@ export default defineConfig(({ mode }) => {
     server: {
       proxy: {
         '/api': {
-          target: apiTarget.origin,
+          target: apiTarget,
           changeOrigin: true,
-          secure: false,
+          secure: true,
         },
       },
     },

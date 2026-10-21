@@ -339,6 +339,13 @@
   background-color: #e2e8f0;
 }
 
+.voter-select-wrap select option {
+  background: #ffffff;
+  color: #1e293b;
+  font-size: 0.85rem;
+  padding: 0.35rem 0.65rem;
+}
+
 /* Actions Row: Common Search and Reset Buttons */
 .voter-actions-row {
   display: flex;

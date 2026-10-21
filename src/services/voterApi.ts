@@ -257,8 +257,32 @@ export async function getVoterOptions(
     const rawInstitutes = data.institutes || data.schools || data.schoolList || [];
 
     const districts = parseList(rawDistricts);
-    const talukas = parseList(rawTalukas);
+    let talukas = parseList(rawTalukas);
     const institutes = parseList(rawInstitutes);
+
+    // If initial call without districtId returned empty talukas, pre-fetch talukas for all districts
+    if ((!districtId || districtId === '') && talukas.length === 0 && districts.length > 0) {
+      try {
+        const talukaPromises = districts.map(async (d) => {
+          try {
+            const subRes = await apiFetch(`/public/ec-voters/options?districtId=${d.id}`);
+            if (subRes.ok) {
+              const subJson = await subRes.json();
+              const subData = subJson.data || subJson;
+              const subTalukas = parseList(subData.talukas || subData.talukaList || []);
+              return subTalukas.map((t) => ({ ...t, districtId: d.id }));
+            }
+          } catch {
+            // ignore individual district error
+          }
+          return [];
+        });
+        const nestedTalukas = await Promise.all(talukaPromises);
+        talukas = nestedTalukas.flat();
+      } catch (err) {
+        console.warn('[voterApi] Failed to pre-fetch all talukas:', err);
+      }
+    }
 
     return {
       options: {

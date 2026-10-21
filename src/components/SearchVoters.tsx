@@ -106,6 +106,7 @@ export const SearchVoters: React.FC<SearchVotersProps> = ({ onBackToHome }) => {
       setOptions((prev) => ({
         ...prev,
         talukas: initialOptionsRef.current.talukas,
+        institutes: initialOptionsRef.current.institutes,
       }));
       return;
     }
@@ -119,7 +120,7 @@ export const SearchVoters: React.FC<SearchVotersProps> = ({ onBackToHome }) => {
         institutes:
           dependentOptions.institutes && dependentOptions.institutes.length > 0
             ? dependentOptions.institutes
-            : prev.institutes,
+            : initialOptionsRef.current.institutes,
       }));
     } catch (err) {
       console.warn('[SearchVoters] Failed to load dependent options for district:', err);
@@ -142,9 +143,19 @@ export const SearchVoters: React.FC<SearchVotersProps> = ({ onBackToHome }) => {
       return;
     }
 
+    // Auto-detect district if none was selected
+    let effectiveDistrictId = selectedDistrictId;
+    if (!effectiveDistrictId) {
+      const matched = options.talukas.find((t) => String(t.id) === String(talId));
+      if (matched?.districtId) {
+        effectiveDistrictId = String(matched.districtId);
+        setSelectedDistrictId(effectiveDistrictId);
+      }
+    }
+
     setIsLoadingDependent(true);
     try {
-      const { options: talukaOptions } = await getVoterOptions(selectedDistrictId, talId);
+      const { options: talukaOptions } = await getVoterOptions(effectiveDistrictId, talId);
       if (talukaOptions.institutes && talukaOptions.institutes.length > 0) {
         setOptions((prev) => ({
           ...prev,
