@@ -4,7 +4,7 @@ import {
   searchEcVoters,
   searchAllDistricts,
   FALLBACK_OPTIONS,
-  getApiBaseUrl,
+  getVoterExportPdfUrl,
 } from '../services/voterApi';
 import type {
   VoterOptionsData,
@@ -57,9 +57,8 @@ export const SearchVoters: React.FC<SearchVotersProps> = ({ onBackToHome }) => {
   // Active query tracker for pagination
   const [activeQuery, setActiveQuery] = useState<ActiveSearchParams | null>(null);
 
-  // Mobile editing in-place
-  const [editingMobileId, setEditingMobileId] = useState<string | null>(null);
-  const [tempMobile, setTempMobile] = useState<string>('');
+  // Poster modal view state
+  const [isPosterModalOpen, setIsPosterModalOpen] = useState<boolean>(false);
 
   // -------------------------------------------------------------
   // Initial Mount: Load Options from GET /api/public/ec-voters/options
@@ -360,21 +359,31 @@ export const SearchVoters: React.FC<SearchVotersProps> = ({ onBackToHome }) => {
 
   // -------------------------------------------------------------
   // Export PDF API Call
-  // Calls GET https://api.mishikshak.quore-tex.com/api/public/ec-voters/export/pdf?districtId=...&talukaId=...
+  // Calls GET https://api.mishikshak.quore-tex.com/api/public/ec-voters/export/pdf?districtId=...&talukaId=...&instituteName=...
   // -------------------------------------------------------------
   const handleExportPdf = async () => {
-    const distId = selectedDistrictId || '32';
-    const talId = selectedTalukaId || '21';
+    const matchedInst = options.institutes.find((i) => i.name === selectedInstitute);
+    const distId = selectedDistrictId || activeQuery?.districtId || matchedInst?.districtId || '32';
 
-    const query = new URLSearchParams();
-    query.append('districtId', String(distId));
-    if (selectedTalukaId) {
-      query.append('talukaId', String(selectedTalukaId));
-    } else {
-      query.append('talukaId', String(talId));
+    let talId = selectedTalukaId || activeQuery?.talukaId;
+    if (!talId) {
+      const firstTaluka = options.talukas.find(
+        (t) => !t.districtId || String(t.districtId) === String(distId)
+      );
+      talId = firstTaluka ? String(firstTaluka.id) : '21';
     }
 
-    const exportUrl = `${getApiBaseUrl()}/public/ec-voters/export/pdf?${query.toString()}`;
+    const instName = (selectedInstitute || activeQuery?.instituteName || '').trim();
+    const elector = (nameInput || activeQuery?.electorName || '').trim();
+    const part = (boothInput || activeQuery?.partNo || '').trim();
+
+    const exportUrl = getVoterExportPdfUrl({
+      districtId: distId,
+      talukaId: talId,
+      instituteName: instName,
+      electorName: elector,
+      partNo: part,
+    });
 
     setIsExportingPdf(true);
     try {
@@ -387,10 +396,16 @@ export const SearchVoters: React.FC<SearchVotersProps> = ({ onBackToHome }) => {
 
       if (res.ok) {
         const blob = await res.blob();
+        if (blob.size === 0) {
+          throw new Error('Received empty PDF file');
+        }
         const blobUrl = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = blobUrl;
-        link.download = `voters-district-${distId}-taluka-${talId}.pdf`;
+        const cleanInst = instName
+          ? `-${instName.replace(/[^a-zA-Z0-9_\-\u0900-\u097F]/g, '_').slice(0, 30)}`
+          : '';
+        link.download = `voters-district-${distId}-taluka-${talId}${cleanInst}.pdf`;
         document.body.appendChild(link);
         link.click();
         link.remove();
@@ -407,55 +422,15 @@ export const SearchVoters: React.FC<SearchVotersProps> = ({ onBackToHome }) => {
     }
   };
 
-  // -------------------------------------------------------------
-  // Mobile Number In-Place Editing
-  // -------------------------------------------------------------
-  const startEditingMobile = (teacherId: string, currentMobile?: string) => {
-    setEditingMobileId(teacherId);
-    setTempMobile(currentMobile || '');
-  };
-
-  const cancelEditingMobile = () => {
-    setEditingMobileId(null);
-    setTempMobile('');
-  };
-
-  const saveMobile = (teacherId: string) => {
-    const cleanNumber = tempMobile.trim();
-    if (cleanNumber && !/^\d{10}$/.test(cleanNumber)) {
-      alert('Please enter a valid 10-digit mobile number.');
-      return;
-    }
-    setVoters((prev) =>
-      prev.map((v) => (v.TeacherId === teacherId ? { ...v, MobileNumber: cleanNumber } : v))
-    );
-    setEditingMobileId(null);
-    setTempMobile('');
-  };
-
   return (
     <div className="voter-portal">
-      {/* Compact Hero Header */}
-      <header className="voter-portal__hero">
-        <div className="voter-portal__hero-pattern" aria-hidden="true" />
-        <div className="container voter-portal__hero-inner">
-          <div className="voter-portal__identity">
-            <img
-              src="/img/shrikant_deshpande_avatar.png"
-              alt="Dr. Shrikant Govind Deshpande"
-              className="voter-portal__photo"
-              width={54}
-              height={54}
-            />
-            <div>
-              <span className="voter-portal__serial">Sr. No. 21</span>
-              <h1 className="voter-portal__title">Amravati Division Teachers Constituency</h1>
-              <p className="voter-portal__lead">
-                Dr. Shrikant Govind Deshpande · Voter &amp; Polling Booth Search
-              </p>
-            </div>
-          </div>
-          <div className="voter-portal__toolbar">
+      {/* Attractive Election Campaign Hero Header */}
+      <header className="voter-campaign-hero">
+        <div className="voter-campaign-hero__ambient" aria-hidden="true" />
+
+        {/* Main Campaign Hero Content */}
+        <div className="container voter-campaign-hero__content">
+          <div className="voter-campaign-hero__actions">
             <button
               type="button"
               className="voter-portal__tool"
@@ -468,7 +443,7 @@ export const SearchVoters: React.FC<SearchVotersProps> = ({ onBackToHome }) => {
               ) : (
                 <i className="fa fa-file-pdf" aria-hidden="true" />
               )}
-              {isExportingPdf ? 'Downloading PDF...' : 'Print / PDF'}
+              <span>{isExportingPdf ? 'Downloading PDF...' : 'Print / PDF'}</span>
             </button>
             {onBackToHome && (
               <button
@@ -477,9 +452,80 @@ export const SearchVoters: React.FC<SearchVotersProps> = ({ onBackToHome }) => {
                 onClick={onBackToHome}
               >
                 <i className="fa fa-arrow-left" aria-hidden="true" />
-                Back to Home
+                <span>Back to Home</span>
               </button>
             )}
+          </div>
+
+          <div className="campaign-showcase">
+            {/* Candidate Identity */}
+            <div className="campaign-candidate">
+              <div className="campaign-candidate__photo-wrap">
+                <img
+                  src="/img/shrikant_deshpande_avatar.png"
+                  alt="Dr. Shrikant Govind Deshpande"
+                  className="campaign-candidate__photo"
+                  width={72}
+                  height={72}
+                />
+                <div className="campaign-candidate__ring" aria-hidden="true" />
+              </div>
+              <div className="campaign-candidate__info">
+                <div className="campaign-candidate__badge">
+                  <i className="fa fa-graduation-cap" aria-hidden="true" />
+                  <span>Amravati Division Teachers Constituency</span>
+                </div>
+                <h1 className="campaign-candidate__name">
+                  डॉ. श्रीकांत गोविंद देशपांडे
+                  <span className="campaign-candidate__name-en">Dr. Shrikant Govind Deshpande</span>
+                </h1>
+                <p className="campaign-candidate__tagline">
+                  मतदार व मतदान केंद्र शोध प्रणाली · Voter &amp; Polling Booth Search Portal
+                </p>
+              </div>
+            </div>
+
+            {/* Official Ballot Slip Replica (मतपत्रिका नमुना) */}
+            <div className="ballot-paper-card">
+              <div className="ballot-slip">
+                {/* Column 1: Serial No */}
+                <div className="ballot-slip__col ballot-slip__serial">
+                  <div className="ballot-slip__cell-mr">
+                    <span className="ballot-slip__lbl">अनुक्रमांक</span>
+                    <span className="ballot-slip__num">२१</span>
+                  </div>
+                  <div className="ballot-slip__cell-en">
+                    <span className="ballot-slip__lbl">Serial No.</span>
+                    <span className="ballot-slip__num">21</span>
+                  </div>
+                </div>
+
+                {/* Column 2: Candidate Name */}
+                <div className="ballot-slip__col ballot-slip__name">
+                  <div className="ballot-slip__name-mr">डॉ. श्रीकांत गोविंद देशपांडे</div>
+                  <div className="ballot-slip__name-en">Dr. Shrikant Govind Deshpande</div>
+                </div>
+
+                {/* Column 3: Candidate Photo */}
+                <div className="ballot-slip__col ballot-slip__photo">
+                  <div className="ballot-slip__photo-frame">
+                    <img
+                      src="/img/shrikant_deshpande_avatar.png"
+                      alt="Dr. Shrikant Govind Deshpande"
+                      width={44}
+                      height={44}
+                    />
+                  </div>
+                </div>
+
+                {/* Column 4: Preference Marker Box */}
+                <div className="ballot-slip__col ballot-slip__vote">
+                  <div className="ballot-slip__vote-box" title="पसंती क्रमांक १ (Preference No. 1)">
+                    <span className="ballot-slip__vote-mark">1</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </header>
@@ -514,7 +560,10 @@ export const SearchVoters: React.FC<SearchVotersProps> = ({ onBackToHome }) => {
                     id="voter-name-input"
                     type="text"
                     value={nameInput}
-                    onChange={(e) => setNameInput(e.target.value)}
+                    onChange={(e) => {
+                      const lettersOnly = e.target.value.replace(/[^a-zA-Z\s\u0900-\u097F]/g, '');
+                      setNameInput(lettersOnly);
+                    }}
                     placeholder="Enter voter name"
                     autoComplete="off"
                   />
@@ -790,51 +839,10 @@ export const SearchVoters: React.FC<SearchVotersProps> = ({ onBackToHome }) => {
                       <div className="voter-card__meta-item voter-card__meta-item--wide">
                         <dt>Mobile Number</dt>
                         <dd>
-                          {editingMobileId === item.TeacherId ? (
-                            <div className="voter-card__mobile-edit">
-                              <input
-                                type="tel"
-                                maxLength={10}
-                                value={tempMobile}
-                                onChange={(e) =>
-                                  setTempMobile(e.target.value.replace(/\D/g, ''))
-                                }
-                                placeholder="10-digit number"
-                                autoFocus
-                              />
-                              <button type="button" onClick={() => saveMobile(item.TeacherId)}>
-                                Save
-                              </button>
-                              <button
-                                type="button"
-                                className="btn-cancel"
-                                onClick={cancelEditingMobile}
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          ) : item.MobileNumber ? (
-                            <span className="voter-card__mobile-row">
-                              <a href={`tel:${item.MobileNumber}`}>{item.MobileNumber}</a>
-                              <button
-                                type="button"
-                                className="voter-card__btn-edit-mobile"
-                                onClick={() =>
-                                  startEditingMobile(item.TeacherId, item.MobileNumber)
-                                }
-                                title="Edit mobile number"
-                              >
-                                <i className="fa fa-pen" aria-hidden="true" />
-                              </button>
-                            </span>
+                          {item.MobileNumber ? (
+                            <a href={`tel:${item.MobileNumber}`}>{item.MobileNumber}</a>
                           ) : (
-                            <button
-                              type="button"
-                              className="voter-card__btn-add-mobile"
-                              onClick={() => startEditingMobile(item.TeacherId, '')}
-                            >
-                              + Add Mobile
-                            </button>
+                            '—'
                           )}
                         </dd>
                       </div>
@@ -926,6 +934,55 @@ export const SearchVoters: React.FC<SearchVotersProps> = ({ onBackToHome }) => {
           </>
         )}
       </main>
+
+      {/* Official Campaign Poster Modal */}
+      {isPosterModalOpen && (
+        <div
+          className="poster-modal-overlay"
+          onClick={() => setIsPosterModalOpen(false)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="poster-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="poster-modal-header">
+              <div className="poster-modal-title">
+                <i className="fa fa-bullhorn" aria-hidden="true" />
+                <span>अधिकृत निवडणूक प्रचार पत्रक · Campaign Poster</span>
+              </div>
+              <button
+                type="button"
+                className="poster-modal-close"
+                onClick={() => setIsPosterModalOpen(false)}
+                aria-label="Close modal"
+              >
+                <i className="fa fa-times" aria-hidden="true" />
+              </button>
+            </div>
+            <div className="poster-modal-body">
+              <img
+                src="/img/shrikant_deshpande.jpg"
+                alt="Dr. Shrikant Govind Deshpande - Election Campaign Poster"
+                className="poster-modal-image"
+              />
+            </div>
+            <div className="poster-modal-footer">
+              <span className="poster-modal-hint">
+                मतदान हे कन्यादान पेक्षाही श्रेष्ठ दान · अनुक्रमांक २१
+              </span>
+              <a
+                href="/img/shrikant_deshpande.jpg"
+                download="Dr_Shrikant_Deshpande_Campaign_Poster.jpg"
+                className="voter-portal__tool"
+                target="_blank"
+                rel="noreferrer"
+              >
+                <i className="fa fa-download" aria-hidden="true" />
+                <span>Download Poster</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

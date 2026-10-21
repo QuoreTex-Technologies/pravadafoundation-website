@@ -497,3 +497,36 @@ export async function searchAllDistricts(
     };
   }
 }
+
+/**
+ * 3. GET /api/public/ec-voters/export/pdf
+ * Generates the PDF export URL with districtId, talukaId, and instituteName (and optional electorName, partNo).
+ * Example: /api/public/ec-voters/export/pdf?districtId=32&talukaId=21&instituteName=A%20A%20A%20SHALA%2CBHATKULI
+ */
+export function getVoterExportPdfUrl(params: {
+  districtId?: number | string;
+  talukaId?: number | string;
+  instituteName?: string;
+  electorName?: string;
+  partNo?: number | string;
+}): string {
+  const distId = params.districtId || '32';
+  const talId = params.talukaId || '21';
+
+  const query = new URLSearchParams();
+  query.append('districtId', String(distId));
+  query.append('talukaId', String(talId));
+
+  if (params.instituteName && params.instituteName.trim()) {
+    query.append('instituteName', params.instituteName.trim());
+  }
+  if (params.electorName && params.electorName.trim()) {
+    query.append('electorName', params.electorName.trim());
+  }
+  if (params.partNo !== undefined && params.partNo !== null && String(params.partNo).trim()) {
+    query.append('partNo', String(params.partNo).trim());
+  }
+
+  const queryString = query.toString().replace(/\+/g, '%20');
+  return `${getApiBaseUrl()}/public/ec-voters/export/pdf?${queryString}`;
+}
