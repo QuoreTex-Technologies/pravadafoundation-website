@@ -4,6 +4,7 @@ import {
   searchEcVoters,
   searchAllDistricts,
   FALLBACK_OPTIONS,
+  getApiBaseUrl,
 } from '../services/voterApi';
 import type {
   VoterOptionsData,
@@ -373,7 +374,7 @@ export const SearchVoters: React.FC<SearchVotersProps> = ({ onBackToHome }) => {
       query.append('talukaId', String(talId));
     }
 
-    const exportUrl = `https://api.mishikshak.quore-tex.com/api/public/ec-voters/export/pdf?${query.toString()}`;
+    const exportUrl = `${getApiBaseUrl()}/public/ec-voters/export/pdf?${query.toString()}`;
 
     setIsExportingPdf(true);
     try {

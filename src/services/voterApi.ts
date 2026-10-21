@@ -60,17 +60,42 @@ export const FALLBACK_OPTIONS: VoterOptionsData = {
   institutes: [],
 };
 
-const envApiUrl = (import.meta as any).env?.VITE_API_BASE_URL
-  ? `${String((import.meta as any).env.VITE_API_BASE_URL).replace(/\/$/, '')}/api`
-  : null;
+/**
+ * Resolves the backend API base URL from import.meta.env.VITE_API_BASE_URL.
+ * Normalizes trailing slashes and ensures '/api' is appended without duplication.
+ */
+export function getApiBaseUrl(): string {
+  const envUrl = (import.meta as any).env?.VITE_API_BASE_URL?.trim();
+  const rawUrl = envUrl || 'https://api.mishikshak.quore-tex.com';
+  const cleanUrl = rawUrl.replace(/\/+$/, '');
+  return cleanUrl.endsWith('/api') ? cleanUrl : `${cleanUrl}/api`;
+}
 
-const BASE_URL_CANDIDATES = [
-  '/api', // Vite proxy routes to VITE_API_BASE_URL
-  ...(envApiUrl ? [envApiUrl] : []),
-  'http://localhost:9056/api',
-  'https://api.mishikshak.quore-tex.com/api',
-  'http://localhost:3001/api',
-];
+/**
+ * Builds a clean, fully-qualified URL for an API endpoint without duplicate '/api' segments.
+ */
+export function buildApiUrl(base: string, endpoint: string): string {
+  const cleanBase = base.replace(/\/+$/, '');
+  const cleanEndpoint = endpoint.replace(/^\/?api\//, '/').replace(/^\/?/, '/');
+  return `${cleanBase}${cleanEndpoint}`;
+}
+
+const isDev = Boolean((import.meta as any).env?.DEV);
+
+/**
+ * Returns prioritized candidate base URLs:
+ * - Local Dev: Vite proxy '/api' first (to utilize server.proxy and avoid CORS on non-whitelisted ports),
+ *   followed by direct backend URL.
+ * - Production: Direct backend URL (from VITE_API_BASE_URL) first, with relative '/api' as secondary fallback
+ *   in case a reverse proxy is configured on the production host.
+ */
+export function getBaseUrlCandidates(): string[] {
+  const primaryApi = getApiBaseUrl();
+  if (isDev) {
+    return ['/api', primaryApi, 'http://localhost:9056/api'];
+  }
+  return [primaryApi, '/api'];
+}
 
 /** Helper to fetch with timeout and fallback candidates */
 async function apiFetch(endpoint: string, options: RequestInit = {}): Promise<Response> {
@@ -78,10 +103,11 @@ async function apiFetch(endpoint: string, options: RequestInit = {}): Promise<Re
   const timeoutId = setTimeout(() => controller.abort(), 8000);
 
   let lastError: any = null;
+  const candidates = getBaseUrlCandidates();
 
-  for (const base of BASE_URL_CANDIDATES) {
+  for (const base of candidates) {
     try {
-      const url = `${base}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+      const url = buildApiUrl(base, endpoint);
       const response = await fetch(url, {
         ...options,
         signal: controller.signal,
@@ -91,10 +117,20 @@ async function apiFetch(endpoint: string, options: RequestInit = {}): Promise<Re
         },
       });
 
-      if (response.ok || response.status < 500) {
+      // Successful response
+      if (response.ok) {
         clearTimeout(timeoutId);
         return response;
       }
+
+      // If client sent invalid input params (400, 422), do not retry other servers
+      if (response.status === 400 || response.status === 422) {
+        clearTimeout(timeoutId);
+        return response;
+      }
+
+      // If 404 (Not Found), 403 (CORS blocked), or 5xx, continue to next candidate
+      lastError = new Error(`HTTP ${response.status} from ${url}`);
     } catch (err) {
       lastError = err;
     }
